@@ -1,11 +1,15 @@
+var request = requiree('request');
+var id;
+var trips;
+
 const express = require('express');
 const session = require('express-session');
 const port = process.env.PORT || 3000;
 const app = express();
 
 // Add your automatic client id and client secret here or as environment variables
-const AUTOMATIC_CLIENT_ID = process.env.AUTOMATIC_CLIENT_ID || 'your-automatic-client-id';
-const AUTOMATIC_CLIENT_SECRET = process.env.AUTOMATIC_CLIENT_SECRET || 'your-automatic-client-secret';
+const AUTOMATIC_CLIENT_ID = process.env.AUTOMATIC_CLIENT_ID || '2ee3c7c2f4b652fc1ee1'; 
+const AUTOMATIC_CLIENT_SECRET = process.env.AUTOMATIC_CLIENT_SECRET || 'ba1590bcd38c31a310d79726e6be9a89d383aa69'; 
 
 const oauth2 = require('simple-oauth2')({
   clientID: AUTOMATIC_CLIENT_ID,
@@ -17,6 +21,19 @@ const oauth2 = require('simple-oauth2')({
 // Authorization uri definition
 const authorizationUri = oauth2.authCode.authorizeURL({
   scope: 'scope:user:profile scope:trip scope:location scope:vehicle:profile scope:vehicle:events scope:behavior'
+});
+
+var tripGetter = 
+request.get({
+  uri: "https://api.automatic.com/trip/",
+  headers: {Authorization: 'Bearer ' + req.session.token.token.access_token},
+  json: true
+}, function(e, r, body) {
+  if(e){
+  } else{
+    trips = body.results;
+  }
+  res.redirect('/welcome');
 });
 
 // Enable sessions
@@ -42,28 +59,38 @@ app.get('/redirect', (req, res) => {
       return;
     }
 
-    // Attach `token` to the user's session for later use
-    // This is where you could save the `token` to a database for later use
-    req.session.token = oauth2.accessToken.create(result);
+// Attach `token` to the user's session for later use
+// This is where you could save the `token` to a database for later use
+req.session.token = oauth2.accessToken.create(result);
+tripGetter();
 
-    res.redirect('/welcome');
-  }
+}
 
-  oauth2.authCode.getToken({
-    code: code
-  }, saveToken);
+oauth2.authCode.getToken({
+  code: code
+}, saveToken);
 });
 
 app.get('/welcome', (req, res) => {
   if (req.session.token) {
-    // Display token to authenticated user
-    console.log('Automatic access token', req.session.token.token.access_token);
-    res.send('You are logged in.<br>Access Token: ' +  req.session.token.token.access_token);
-  } else {
-    // No token, so redirect to login
-    res.redirect('/');
-  }
+// Display token to authenticated user
+console.log('Automatic access token', req.session.token.token.access_token);
+res.send('You are logged in.<br>Access Token: ' +  req.session.token.token.access_token + printTrips());
+} else {
+// No token, so redirect to login
+res.redirect('/');
+}
 });
+
+var printTrips = function() {
+  var tripIds = "";
+
+  for (var i trips.length - 1; i >= 0; i--) {
+    tripIds += trips[i];
+  }
+
+  return tripIds;
+}
 
 // Main page of app with link to log in
 app.get('/', (req, res) => {
@@ -74,3 +101,16 @@ app.get('/', (req, res) => {
 app.listen(port);
 
 console.log('Express server started on port ' + port);
+
+var idGetter = 
+request.get({
+  uri: "https://api.automatic.com/device/",
+  headers: {Authorization: 'Bearer ' + req.session.token.token.access_token},
+  json: true
+}, function(e, r, body) {
+  if(e){
+  } else{
+    id = body.results[0].id;
+  }
+});
+
